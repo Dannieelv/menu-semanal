@@ -119,13 +119,16 @@ export default function Page() {
     };
     const intervalo = setInterval(refrescarServidor, 30_000);
 
-    // Refrescar también al volver a la pestaña
+    // Refrescar al volver a la pestaña (focus) o al salir de background (visibilitychange)
     const onFocus = () => refrescarServidor();
+    const onVisibility = () => { if (!document.hidden) refrescarServidor(); };
     window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       clearInterval(intervalo);
       window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
 
@@ -171,10 +174,9 @@ export default function Page() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ dia, valor: nuevo }),
     });
-    await enviarNotificacion(
-      nuevo ? '🏠 No cenas en casa' : '✅ ¡Vuelves a comer en casa!',
-      nuevo ? `${dia}: Dani no estará en casa` : `${dia}: Dani sí estará en casa`
-    );
+    if (nuevo) {
+      await enviarNotificacion('🏠 No cenas en casa', `${dia}: Dani no estará en casa`);
+    }
   };
 
   const handleTestNotificacion = async () => {
