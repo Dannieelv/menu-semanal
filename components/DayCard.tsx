@@ -30,7 +30,14 @@ export default function DayCard({
       {/* Cabecera: nombre + fecha + badges */}
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-2xl font-bold text-gray-800">{dia}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-2xl font-bold text-gray-800">{dia}</p>
+            {rating !== undefined && (
+              <span className="bg-yellow-400 text-white text-sm font-bold px-2.5 py-0.5 rounded-full">
+                ⭐ {rating}
+              </span>
+            )}
+          </div>
           <p className="text-base text-gray-400">{fecha}</p>
         </div>
         <div className="flex items-center gap-2 pt-1">
