@@ -15,6 +15,14 @@ type Props = {
 
 const NOTAS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
+function getRatingIcon(n: number): string {
+  if (n <= 2) return '🤢';
+  if (n <= 4) return '😕';
+  if (n <= 6) return '😐';
+  if (n <= 8) return '😋';
+  return '🤩';
+}
+
 export default function DayCard({
   dia, fecha, plato, esHoy, modoEdicion, onEditar,
   rating, onRating, noCena, onToggleNoCena,
@@ -34,7 +42,7 @@ export default function DayCard({
             <p className="text-2xl font-bold text-gray-800">{dia}</p>
             {rating !== undefined && (
               <span className="bg-yellow-400 text-white text-sm font-bold px-2.5 py-0.5 rounded-full">
-                ⭐ {rating}
+                {getRatingIcon(rating)} {rating}
               </span>
             )}
           </div>
