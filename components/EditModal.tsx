@@ -5,16 +5,18 @@ import { useState, useEffect, useRef } from 'react';
 type Props = {
   dia: string;
   platoActual: string;
-  onGuardar: (nuevoPlato: string) => void;
+  detalleActual: string;
+  onGuardar: (nuevoPlato: string, nuevoDetalle: string) => void;
   onCancelar: () => void;
 };
 
-export default function EditModal({ dia, platoActual, onGuardar, onCancelar }: Props) {
-  const [valor, setValor] = useState(platoActual);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+export default function EditModal({ dia, platoActual, detalleActual, onGuardar, onCancelar }: Props) {
+  const [plato, setPlato] = useState(platoActual);
+  const [detalle, setDetalle] = useState(detalleActual);
+  const platoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    textareaRef.current?.focus();
+    platoRef.current?.focus();
   }, []);
 
   return (
@@ -22,21 +24,44 @@ export default function EditModal({ dia, platoActual, onGuardar, onCancelar }: P
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       onClick={(e) => e.target === e.currentTarget && onCancelar()}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
         <h2 className="text-2xl font-bold text-gray-800">
           Menú del {dia}
         </h2>
-        <textarea
-          ref={textareaRef}
-          value={valor}
-          onChange={(e) => setValor(e.target.value)}
-          rows={4}
-          placeholder="Escribe el menú del día..."
-          className="border-2 border-gray-300 focus:border-green-500 rounded-xl p-3 text-lg text-gray-800 resize-none outline-none transition-colors"
-        />
+
+        {/* Nombre del plato */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+            Nombre del plato
+          </label>
+          <input
+            ref={platoRef}
+            type="text"
+            value={plato}
+            onChange={(e) => setPlato(e.target.value)}
+            placeholder="Ej: Arroz con lentejas y aguacate"
+            className="border-2 border-gray-300 focus:border-green-500 rounded-xl p-3 text-lg text-gray-800 outline-none transition-colors"
+          />
+        </div>
+
+        {/* Ingredientes */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+            🥦 Ingredientes y cantidades
+          </label>
+          <textarea
+            value={detalle}
+            onChange={(e) => setDetalle(e.target.value)}
+            rows={7}
+            placeholder={'• 50 g arroz (en seco)\n• 250 g lentejas cocidas\n• 50 g aguacate'}
+            className="border-2 border-gray-300 focus:border-green-500 rounded-xl p-3 text-base text-gray-800 resize-none outline-none transition-colors font-mono leading-relaxed"
+          />
+          <p className="text-xs text-gray-400">Un ingrediente por línea. Usa • al inicio de cada línea.</p>
+        </div>
+
         <div className="flex gap-3">
           <button
-            onClick={() => onGuardar(valor.trim())}
+            onClick={() => onGuardar(plato.trim(), detalle.trim())}
             className="flex-1 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-bold py-3 rounded-xl text-lg transition-colors"
           >
             Guardar

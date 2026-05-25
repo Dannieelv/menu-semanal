@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import {
   DIAS, Dia, MENU_DEFAULT,
   cargarMenu, guardarMenu, getDiaHoy, getFechaDelDia,
-  cargarDetalles,
+  cargarDetalles, guardarDetalles,
   cargarRatings, guardarRating,
 } from '@/lib/menu';
 import { getUsuario, type Usuario } from '@/lib/usuario';
@@ -114,10 +114,13 @@ export default function Page() {
     setNotifPermiso(Notification.permission);
   };
 
-  const handleGuardar = async (dia: Dia, nuevoPlato: string) => {
+  const handleGuardar = async (dia: Dia, nuevoPlato: string, nuevoDetalle: string) => {
     const nuevoMenu = { ...menu, [dia]: nuevoPlato };
     setMenu(nuevoMenu);
     guardarMenu(nuevoMenu);
+    const nuevosDetalles = { ...detalles, [dia]: nuevoDetalle };
+    setDetalles(nuevosDetalles);
+    guardarDetalles(nuevosDetalles);
     setEditando(null);
     await enviarNotificacion('🍽️ Menú actualizado', `${dia}: ${nuevoPlato}`);
   };
@@ -222,7 +225,8 @@ export default function Page() {
         <EditModal
           dia={editando}
           platoActual={menu[editando]}
-          onGuardar={(plato) => handleGuardar(editando, plato)}
+          detalleActual={detalles[editando] ?? ''}
+          onGuardar={(plato, detalle) => handleGuardar(editando, plato, detalle)}
           onCancelar={() => setEditando(null)}
         />
       )}
