@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import {
-  DIAS, Dia,
-  cargarMenu, guardarMenu, getDiaHoy,
+  DIAS, Dia, MENU_DEFAULT,
+  cargarMenu, guardarMenu, getDiaHoy, getFechaDelDia,
   cargarRatings, guardarRating,
   cargarNoCena, guardarNoCena,
 } from '@/lib/menu';
@@ -17,9 +17,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = atob(base64);
   const output = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; i++) {
-    output[i] = rawData.charCodeAt(i);
-  }
+  for (let i = 0; i < rawData.length; i++) output[i] = rawData.charCodeAt(i);
   return output;
 }
 
@@ -48,20 +46,30 @@ async function enviarNotificacion(title: string, body: string) {
 }
 
 export default function Page() {
-  const [menu, setMenu] = useState<Record<Dia, string> | null>(null);
+  // Inicializar con defaults para evitar estado null y problemas de hidratación
+  const [menu, setMenu] = useState<Record<Dia, string>>(MENU_DEFAULT);
   const [ratings, setRatings] = useState<Partial<Record<Dia, number>>>({});
   const [noCena, setNoCena] = useState<Partial<Record<Dia, boolean>>>({});
   const [modoEdicion, setModoEdicion] = useState(false);
   const [editando, setEditando] = useState<Dia | null>(null);
   const [diaHoy, setDiaHoy] = useState<Dia | null>(null);
   const [notifPermiso, setNotifPermiso] = useState<NotificationPermission | null>(null);
+  const [cargado, setCargado] = useState(false);
 
   useEffect(() => {
     setMenu(cargarMenu());
     setRatings(cargarRatings());
     setNoCena(cargarNoCena());
-    setDiaHoy(getDiaHoy());
+    const hoy = getDiaHoy();
+    setDiaHoy(hoy);
     if ('Notification' in window) setNotifPermiso(Notification.permission);
+    setCargado(true);
+
+    // Scroll al día de hoy
+    setTimeout(() => {
+      const el = document.querySelector(`[data-day="${hoy}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
   }, []);
 
   const handleSuscribir = async () => {
@@ -70,7 +78,6 @@ export default function Page() {
   };
 
   const handleGuardar = async (dia: Dia, nuevoPlato: string) => {
-    if (!menu) return;
     const nuevoMenu = { ...menu, [dia]: nuevoPlato };
     setMenu(nuevoMenu);
     guardarMenu(nuevoMenu);
@@ -79,51 +86,44 @@ export default function Page() {
   };
 
   const handleRating = (dia: Dia, nota: number | undefined) => {
-    const nuevas = { ...ratings, [dia]: nota };
-    if (nota === undefined) delete nuevas[dia];
+    const nuevas = { ...ratings };
+    if (nota === undefined) delete nuevas[dia]; else nuevas[dia] = nota;
     setRatings(nuevas);
     guardarRating(dia, nota);
   };
 
   const handleToggleNoCena = async (dia: Dia) => {
     const nuevo = !noCena[dia];
-    const nuevoNoCena = { ...noCena, [dia]: nuevo };
-    setNoCena(nuevoNoCena);
+    setNoCena({ ...noCena, [dia]: nuevo });
     guardarNoCena(dia, nuevo);
-    if (nuevo) {
-      await enviarNotificacion('🏠 No cenas en casa', `${dia}: no estarás en casa a la hora de comer`);
-    } else {
-      await enviarNotificacion('✅ ¡Vuelves a comer en casa!', `${dia}: sí estarás en casa`);
-    }
-  };
-
-  if (!menu) {
-    return (
-      <main className="min-h-screen bg-green-50 flex items-center justify-center">
-        <p className="text-2xl text-gray-500">Cargando...</p>
-      </main>
+    await enviarNotificacion(
+      nuevo ? '🏠 No cenas en casa' : '✅ ¡Vuelves a comer en casa!',
+      nuevo
+        ? `${dia}: no estarás en casa a la hora de comer`
+        : `${dia}: sí estarás en casa`
     );
-  }
+  };
 
   return (
     <main className="min-h-screen bg-green-50">
+      {/* Cabecera con botón editar discreto */}
       <header className="bg-white shadow-sm sticky top-0 z-10 px-4 py-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">🍽️ Menú semanal</h1>
         <button
           onClick={() => setModoEdicion((v) => !v)}
+          title={modoEdicion ? 'Salir de edición' : 'Editar menús'}
           className={`
-            font-semibold px-4 py-2 rounded-xl text-base transition-colors
+            p-2 rounded-xl transition-colors text-xl
             ${modoEdicion
-              ? 'bg-green-500 hover:bg-green-600 text-white'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }
+              ? 'bg-green-100 text-green-600'
+              : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'}
           `}
         >
-          {modoEdicion ? '✅ Listo' : '✏️ Editar'}
+          {modoEdicion ? '✅' : '⚙️'}
         </button>
       </header>
 
-      {notifPermiso === 'default' && (
+      {cargado && notifPermiso === 'default' && (
         <div className="max-w-lg mx-auto px-4 pt-4">
           <button
             onClick={handleSuscribir}
@@ -139,6 +139,7 @@ export default function Page() {
           <DayCard
             key={dia}
             dia={dia}
+            fecha={getFechaDelDia(dia)}
             plato={menu[dia]}
             esHoy={dia === diaHoy}
             modoEdicion={modoEdicion}

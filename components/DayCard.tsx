@@ -2,6 +2,7 @@
 
 type Props = {
   dia: string;
+  fecha: string;
   plato: string;
   esHoy: boolean;
   modoEdicion: boolean;
@@ -15,20 +16,24 @@ type Props = {
 const NOTAS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export default function DayCard({
-  dia, plato, esHoy, modoEdicion, onEditar,
+  dia, fecha, plato, esHoy, modoEdicion, onEditar,
   rating, onRating, noCena, onToggleNoCena,
 }: Props) {
   return (
     <div
+      data-day={dia}
       className={`
-        rounded-2xl p-5 shadow-md flex flex-col gap-3 transition-all
+        scroll-mt-20 rounded-2xl p-5 shadow-md flex flex-col gap-4 transition-all
         ${esHoy ? 'bg-green-50 border-2 border-green-500' : 'bg-white border-2 border-transparent'}
       `}
     >
-      {/* Cabecera */}
-      <div className="flex items-center justify-between">
-        <span className="text-xl font-bold text-gray-800">{dia}</span>
-        <div className="flex items-center gap-2">
+      {/* Cabecera: nombre + fecha + badges */}
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-2xl font-bold text-gray-800">{dia}</p>
+          <p className="text-base text-gray-400">{fecha}</p>
+        </div>
+        <div className="flex items-center gap-2 pt-1">
           {esHoy && (
             <span className="bg-green-500 text-white text-sm font-semibold px-3 py-1 rounded-full">
               HOY
@@ -42,45 +47,45 @@ export default function DayCard({
         </div>
       </div>
 
-      {/* Plato */}
-      <p className="text-lg text-gray-700 leading-snug min-h-[2rem]">
-        {plato || <span className="italic text-gray-400">Sin menú</span>}
+      {/* Plato — texto grande */}
+      <p className="text-2xl font-medium text-gray-800 leading-snug min-h-[2rem]">
+        {plato || <span className="italic text-gray-400 text-xl">Sin menú</span>}
       </p>
 
-      {/* Puntuación */}
-      <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-gray-500">
-          {rating !== undefined ? `⭐ Puntuación: ${rating}/10` : 'Puntúa el plato'}
-        </span>
-        <div className="grid grid-cols-5 gap-1">
-          {NOTAS.map((n) => (
-            <button
-              key={n}
-              onClick={() => onRating(rating === n ? undefined : n)}
-              className={`
-                py-2 rounded-lg text-sm font-bold transition-colors
-                ${rating === n
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }
-              `}
-            >
-              {n}
-            </button>
-          ))}
+      {/* Puntuación — solo en modo edición */}
+      {modoEdicion && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-gray-500">
+            {rating !== undefined ? `⭐ Puntuación: ${rating}/10` : 'Puntúa el plato'}
+          </span>
+          <div className="grid grid-cols-5 gap-1">
+            {NOTAS.map((n) => (
+              <button
+                key={n}
+                onClick={() => onRating(rating === n ? undefined : n)}
+                className={`
+                  py-2 rounded-lg text-sm font-bold transition-colors
+                  ${rating === n
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}
+                `}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Botones inferiores */}
-      <div className="flex gap-2 mt-1">
+      {/* Botones */}
+      <div className="flex gap-2">
         <button
           onClick={onToggleNoCena}
           className={`
-            flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors
+            flex-1 py-3 rounded-xl text-base font-semibold transition-colors
             ${noCena
               ? 'bg-orange-400 hover:bg-orange-500 text-white'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-            }
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
           `}
         >
           {noCena ? '🏠 No ceno en casa' : '🏠 Ceno en casa'}
@@ -90,7 +95,7 @@ export default function DayCard({
           <button
             onClick={onEditar}
             aria-label={`Editar menú del ${dia}`}
-            className="bg-amber-400 hover:bg-amber-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors"
+            className="bg-amber-400 hover:bg-amber-500 text-white font-semibold px-4 py-3 rounded-xl text-sm transition-colors"
           >
             ✏️ Cambiar
           </button>

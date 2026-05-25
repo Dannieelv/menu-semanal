@@ -22,18 +22,33 @@ export const MENU_DEFAULT: Record<Dia, string> = {
 
 // ─── Día actual ───────────────────────────────────────────────────────────────
 
-const DIA_HOY_MAP: Record<number, Dia> = {
-  0: 'Domingo',
-  1: 'Lunes',
-  2: 'Martes',
-  3: 'Miércoles',
-  4: 'Jueves',
-  5: 'Viernes',
-  6: 'Sábado',
+const DIA_DOW: Record<number, Dia> = {
+  0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles',
+  4: 'Jueves', 5: 'Viernes', 6: 'Sábado',
+};
+
+const DOW_DIA: Record<Dia, number> = {
+  Lunes: 1, Martes: 2, Miércoles: 3, Jueves: 4,
+  Viernes: 5, Sábado: 6, Domingo: 0,
 };
 
 export function getDiaHoy(): Dia {
-  return DIA_HOY_MAP[new Date().getDay()];
+  return DIA_DOW[new Date().getDay()];
+}
+
+// ─── Fecha formateada: "26 de mayo" ──────────────────────────────────────────
+
+const MESES = [
+  'enero','febrero','marzo','abril','mayo','junio',
+  'julio','agosto','septiembre','octubre','noviembre','diciembre',
+];
+
+export function getFechaDelDia(dia: Dia): string {
+  const hoy = new Date();
+  const diff = DOW_DIA[dia] - hoy.getDay();
+  const fecha = new Date(hoy);
+  fecha.setDate(hoy.getDate() + diff);
+  return `${fecha.getDate()} de ${MESES[fecha.getMonth()]}`;
 }
 
 // ─── Clave ISO de semana (ej: "2026-W22") ────────────────────────────────────
@@ -84,17 +99,12 @@ export function cargarRatings(): Partial<Record<Dia, number>> {
 }
 
 export function guardarRating(dia: Dia, nota: number | undefined): void {
-  const weekKey = getWeekKey();
   const ratings = cargarRatings();
-  if (nota === undefined) {
-    delete ratings[dia];
-  } else {
-    ratings[dia] = nota;
-  }
-  localStorage.setItem(RATINGS_KEY, JSON.stringify({ weekKey, ratings }));
+  if (nota === undefined) delete ratings[dia]; else ratings[dia] = nota;
+  localStorage.setItem(RATINGS_KEY, JSON.stringify({ weekKey: getWeekKey(), ratings }));
 }
 
-// ─── "No ceno en casa" (se reinicia cada semana) ──────────────────────────────
+// ─── "No ceno en casa" (se reinicia cada semana) ─────────────────────────────
 
 const NO_CENA_KEY = 'no-cena-semanal';
 
@@ -113,8 +123,7 @@ export function cargarNoCena(): Partial<Record<Dia, boolean>> {
 }
 
 export function guardarNoCena(dia: Dia, valor: boolean): void {
-  const weekKey = getWeekKey();
   const noCena = cargarNoCena();
   noCena[dia] = valor;
-  localStorage.setItem(NO_CENA_KEY, JSON.stringify({ weekKey, noCena }));
+  localStorage.setItem(NO_CENA_KEY, JSON.stringify({ weekKey: getWeekKey(), noCena }));
 }
