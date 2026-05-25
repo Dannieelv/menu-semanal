@@ -59,6 +59,16 @@ async function fetchEstadoServidor(): Promise<Record<string, boolean>> {
   }
 }
 
+async function fetchMenuServidor(): Promise<{ menu: Record<Dia, string>; detalles: Record<Dia, string> } | null> {
+  try {
+    const res = await fetch('/api/menu');
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export default function Page() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [cargado, setCargado] = useState(false);
@@ -83,8 +93,16 @@ export default function Page() {
     setDiaHoy(hoy);
     if ('Notification' in window) setNotifPermiso(Notification.permission);
 
-    // Cargar noCena desde el servidor
+    // Cargar estado y menú desde el servidor (fuente de verdad compartida)
     fetchEstadoServidor().then((nc) => setNoCena(nc));
+    fetchMenuServidor().then((data) => {
+      if (data) {
+        setMenu(data.menu);
+        setDetalles(data.detalles);
+        guardarMenu(data.menu);
+        guardarDetalles(data.detalles);
+      }
+    });
     setCargado(true);
 
     setTimeout(() => {
@@ -92,13 +110,17 @@ export default function Page() {
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 200);
 
-    // Refrescar noCena cada 30 s (para que Mamá vea cambios sin recargar)
-    const intervalo = setInterval(() => {
+    // Refrescar cada 30 s (para que Mamá vea cambios sin recargar)
+    const refrescarServidor = () => {
       fetchEstadoServidor().then((nc) => setNoCena(nc));
-    }, 30_000);
+      fetchMenuServidor().then((data) => {
+        if (data) { setMenu(data.menu); setDetalles(data.detalles); }
+      });
+    };
+    const intervalo = setInterval(refrescarServidor, 30_000);
 
     // Refrescar también al volver a la pestaña
-    const onFocus = () => fetchEstadoServidor().then((nc) => setNoCena(nc));
+    const onFocus = () => refrescarServidor();
     window.addEventListener('focus', onFocus);
 
     return () => {
@@ -122,7 +144,14 @@ export default function Page() {
     setDetalles(nuevosDetalles);
     guardarDetalles(nuevosDetalles);
     setEditando(null);
-    await enviarNotificacion('🍽️ Menú actualizado', `${dia}: ${nuevoPlato}`);
+    await Promise.all([
+      fetch('/api/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ menu: nuevoMenu, detalles: nuevosDetalles }),
+      }),
+      enviarNotificacion('🍽️ Menú actualizado', `${dia}: ${nuevoPlato}`),
+    ]);
   };
 
   const handleRating = (dia: Dia, nota: number | undefined) => {
