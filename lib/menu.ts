@@ -1,30 +1,59 @@
 export const DIAS = [
-  'Lunes',
-  'Martes',
-  'Miércoles',
-  'Jueves',
-  'Viernes',
-  'Sábado',
-  'Domingo',
+  'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo',
 ] as const;
 
 export type Dia = (typeof DIAS)[number];
 
+// ─── Menú por defecto ─────────────────────────────────────────────────────────
+
 export const MENU_DEFAULT: Record<Dia, string> = {
-  Lunes: 'Lentejas con chorizo',
-  Martes: 'Pollo al horno con patatas',
-  Miércoles: 'Merluza a la plancha con ensalada',
-  Jueves: 'Arroz con pollo',
-  Viernes: 'Croquetas caseras y ensalada',
-  Sábado: 'Paella de mariscos',
-  Domingo: 'Cocido madrileño',
+  Lunes:     'Arroz, lentejas, aguacate y champiñones',
+  Martes:    'Patata, carne picada, aguacate y cebolla',
+  Miércoles: 'Pasta, garbanzos, aguacate y calabacín',
+  Jueves:    'Gnocchi, ternera, aguacate, champiñones y cebolla',
+  Viernes:   'Arroz, alubias blancas, aguacate, calabacín y champiñones',
+  Sábado:    'Arroz, lentejas, aguacate y champiñones',
+  Domingo:   'Patata, carne picada, aguacate y cebolla',
+};
+
+// ─── Detalles / ingredientes por defecto ─────────────────────────────────────
+
+export const DETALLES_DEFAULT: Record<Dia, string> = {
+  Lunes: `• 50 g arroz (en seco)
+• 250 g lentejas cocidas
+• 50 g aguacate
+• 300 g champiñones salteados`,
+  Martes: `• 250 g patata cocida
+• 80 g carne picada magra
+• 50 g aguacate
+• 300 g cebolla pochada`,
+  Miércoles: `• 50 g pasta (en seco)
+• 250 g garbanzos cocidos
+• 50 g aguacate
+• 300 g calabacín a la plancha`,
+  Jueves: `• 100 g gnocchi
+• 80 g ternera magra fileteada
+• 50 g aguacate
+• 200 g champiñones + 100 g cebolla`,
+  Viernes: `• 50 g arroz (en seco)
+• 300 g alubias blancas cocidas
+• 50 g aguacate
+• 150 g calabacín + 150 g champiñones`,
+  Sábado: `• 50 g arroz (en seco)
+• 250 g lentejas cocidas
+• 50 g aguacate
+• 300 g champiñones salteados`,
+  Domingo: `• 250 g patata cocida
+• 80 g carne picada magra
+• 50 g aguacate
+• 300 g cebolla pochada`,
 };
 
 // ─── Día actual ───────────────────────────────────────────────────────────────
 
 const DIA_DOW: Record<number, Dia> = {
   0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles',
-  4: 'Jueves', 5: 'Viernes', 6: 'Sábado',
+  4: 'Jueves',  5: 'Viernes', 6: 'Sábado',
 };
 
 const DOW_DIA: Record<Dia, number> = {
@@ -36,7 +65,7 @@ export function getDiaHoy(): Dia {
   return DIA_DOW[new Date().getDay()];
 }
 
-// ─── Fecha formateada: "26 de mayo" ──────────────────────────────────────────
+// ─── Fecha formateada: "25 de mayo" ──────────────────────────────────────────
 
 const MESES = [
   'enero','febrero','marzo','abril','mayo','junio',
@@ -51,7 +80,7 @@ export function getFechaDelDia(dia: Dia): string {
   return `${fecha.getDate()} de ${MESES[fecha.getMonth()]}`;
 }
 
-// ─── Clave ISO de semana (ej: "2026-W22") ────────────────────────────────────
+// ─── Clave ISO de semana ──────────────────────────────────────────────────────
 
 export function getWeekKey(): string {
   const d = new Date();
@@ -63,9 +92,9 @@ export function getWeekKey(): string {
   return `${utc.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
-// ─── Menú (persiste indefinidamente) ─────────────────────────────────────────
+// ─── Menú ─────────────────────────────────────────────────────────────────────
 
-const MENU_KEY = 'menu-semanal';
+const MENU_KEY = 'menu-semanal-v2';
 
 export function cargarMenu(): Record<Dia, string> {
   if (typeof window === 'undefined') return { ...MENU_DEFAULT };
@@ -80,10 +109,26 @@ export function guardarMenu(menu: Record<Dia, string>): void {
   localStorage.setItem(MENU_KEY, JSON.stringify(menu));
 }
 
-// ─── Puntuaciones (se reinician cada semana) ──────────────────────────────────
+// ─── Detalles ─────────────────────────────────────────────────────────────────
+
+const DETALLES_KEY = 'detalles-semanal';
+
+export function cargarDetalles(): Record<Dia, string> {
+  if (typeof window === 'undefined') return { ...DETALLES_DEFAULT };
+  try {
+    const saved = localStorage.getItem(DETALLES_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch { /* fallback */ }
+  return { ...DETALLES_DEFAULT };
+}
+
+export function guardarDetalles(detalles: Record<Dia, string>): void {
+  localStorage.setItem(DETALLES_KEY, JSON.stringify(detalles));
+}
+
+// ─── Puntuaciones (semanales) ─────────────────────────────────────────────────
 
 const RATINGS_KEY = 'ratings-semanal';
-
 type WeeklyRatings = { weekKey: string; ratings: Partial<Record<Dia, number>> };
 
 export function cargarRatings(): Partial<Record<Dia, number>> {
@@ -104,10 +149,9 @@ export function guardarRating(dia: Dia, nota: number | undefined): void {
   localStorage.setItem(RATINGS_KEY, JSON.stringify({ weekKey: getWeekKey(), ratings }));
 }
 
-// ─── "No ceno en casa" (se reinicia cada semana) ─────────────────────────────
+// ─── "No ceno en casa" (semanal) ─────────────────────────────────────────────
 
 const NO_CENA_KEY = 'no-cena-semanal';
-
 type WeeklyNoCena = { weekKey: string; noCena: Partial<Record<Dia, boolean>> };
 
 export function cargarNoCena(): Partial<Record<Dia, boolean>> {

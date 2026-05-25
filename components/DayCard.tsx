@@ -1,5 +1,7 @@
 'use client';
 
+import { type Usuario } from '@/lib/usuario';
+
 type Props = {
   dia: string;
   fecha: string;
@@ -11,6 +13,8 @@ type Props = {
   onRating: (nota: number | undefined) => void;
   noCena: boolean;
   onToggleNoCena: () => void;
+  onVerDetalle: () => void;
+  usuario: Usuario;
 };
 
 const NOTAS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -25,7 +29,7 @@ function getRatingIcon(n: number): string {
 
 export default function DayCard({
   dia, fecha, plato, esHoy, modoEdicion, onEditar,
-  rating, onRating, noCena, onToggleNoCena,
+  rating, onRating, noCena, onToggleNoCena, onVerDetalle, usuario,
 }: Props) {
   return (
     <div
@@ -35,7 +39,7 @@ export default function DayCard({
         ${esHoy ? 'bg-green-50 border-2 border-green-500' : 'bg-white border-2 border-transparent'}
       `}
     >
-      {/* Cabecera: nombre + fecha + badges */}
+      {/* Cabecera */}
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -62,7 +66,7 @@ export default function DayCard({
         </div>
       </div>
 
-      {/* Plato — texto grande */}
+      {/* Plato */}
       <p className="text-2xl font-medium text-gray-800 leading-snug min-h-[2rem]">
         {plato || <span className="italic text-gray-400 text-xl">Sin menú</span>}
       </p>
@@ -71,7 +75,7 @@ export default function DayCard({
       {modoEdicion && (
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-gray-500">
-            {rating !== undefined ? `⭐ Puntuación: ${rating}/10` : 'Puntúa el plato'}
+            {rating !== undefined ? `${getRatingIcon(rating)} Puntuación: ${rating}/10` : 'Puntúa el plato'}
           </span>
           <div className="grid grid-cols-5 gap-1">
             {NOTAS.map((n) => (
@@ -93,26 +97,38 @@ export default function DayCard({
       )}
 
       {/* Botones */}
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2">
+        {/* Ver ingredientes — visible para todos */}
         <button
-          onClick={onToggleNoCena}
-          className={`
-            flex-1 py-3 rounded-xl text-base font-semibold transition-colors
-            ${noCena
-              ? 'bg-orange-400 hover:bg-orange-500 text-white'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
-          `}
+          onClick={onVerDetalle}
+          className="w-full py-3 rounded-xl text-base font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors"
         >
-          {noCena ? '🏠 No ceno en casa' : '🏠 Ceno en casa'}
+          🥦 Ver ingredientes
         </button>
 
+        {/* Ceno en casa — solo para Dani */}
+        {usuario === 'dani' && (
+          <button
+            onClick={onToggleNoCena}
+            className={`
+              w-full py-3 rounded-xl text-base font-semibold transition-colors
+              ${noCena
+                ? 'bg-orange-400 hover:bg-orange-500 text-white'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
+            `}
+          >
+            {noCena ? '🏠 No ceno en casa' : '🏠 Ceno en casa'}
+          </button>
+        )}
+
+        {/* Cambiar menú — solo en modo edición */}
         {modoEdicion && (
           <button
             onClick={onEditar}
             aria-label={`Editar menú del ${dia}`}
-            className="bg-amber-400 hover:bg-amber-500 text-white font-semibold px-4 py-3 rounded-xl text-sm transition-colors"
+            className="w-full bg-amber-400 hover:bg-amber-500 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
           >
-            ✏️ Cambiar
+            ✏️ Cambiar menú
           </button>
         )}
       </div>

@@ -4,11 +4,15 @@ import { useState, useEffect } from 'react';
 import {
   DIAS, Dia, MENU_DEFAULT,
   cargarMenu, guardarMenu, getDiaHoy, getFechaDelDia,
+  cargarDetalles,
   cargarRatings, guardarRating,
   cargarNoCena, guardarNoCena,
 } from '@/lib/menu';
+import { getUsuario, type Usuario } from '@/lib/usuario';
 import DayCard from '@/components/DayCard';
 import EditModal from '@/components/EditModal';
+import DetalleModal from '@/components/DetalleModal';
+import UserSelect from '@/components/UserSelect';
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
@@ -46,18 +50,24 @@ async function enviarNotificacion(title: string, body: string) {
 }
 
 export default function Page() {
-  // Inicializar con defaults para evitar estado null y problemas de hidratación
-  const [menu, setMenu] = useState<Record<Dia, string>>(MENU_DEFAULT);
-  const [ratings, setRatings] = useState<Partial<Record<Dia, number>>>({});
-  const [noCena, setNoCena] = useState<Partial<Record<Dia, boolean>>>({});
-  const [modoEdicion, setModoEdicion] = useState(false);
-  const [editando, setEditando] = useState<Dia | null>(null);
-  const [diaHoy, setDiaHoy] = useState<Dia | null>(null);
-  const [notifPermiso, setNotifPermiso] = useState<NotificationPermission | null>(null);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [cargado, setCargado] = useState(false);
 
+  const [menu, setMenu] = useState<Record<Dia, string>>(MENU_DEFAULT);
+  const [detalles, setDetalles] = useState<Record<Dia, string>>({} as Record<Dia, string>);
+  const [ratings, setRatings] = useState<Partial<Record<Dia, number>>>({});
+  const [noCena, setNoCena] = useState<Partial<Record<Dia, boolean>>>({});
+
+  const [modoEdicion, setModoEdicion] = useState(false);
+  const [editando, setEditando] = useState<Dia | null>(null);
+  const [vientoDetalle, setViendoDetalle] = useState<Dia | null>(null);
+  const [diaHoy, setDiaHoy] = useState<Dia | null>(null);
+  const [notifPermiso, setNotifPermiso] = useState<NotificationPermission | null>(null);
+
   useEffect(() => {
+    setUsuario(getUsuario());
     setMenu(cargarMenu());
+    setDetalles(cargarDetalles());
     setRatings(cargarRatings());
     setNoCena(cargarNoCena());
     const hoy = getDiaHoy();
@@ -65,12 +75,13 @@ export default function Page() {
     if ('Notification' in window) setNotifPermiso(Notification.permission);
     setCargado(true);
 
-    // Scroll al día de hoy
     setTimeout(() => {
       const el = document.querySelector(`[data-day="${hoy}"]`);
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 200);
   }, []);
+
+  const handleUserSelect = (u: Usuario) => setUsuario(u);
 
   const handleSuscribir = async () => {
     await suscribirANotificaciones();
@@ -98,29 +109,37 @@ export default function Page() {
     guardarNoCena(dia, nuevo);
     await enviarNotificacion(
       nuevo ? '🏠 No cenas en casa' : '✅ ¡Vuelves a comer en casa!',
-      nuevo
-        ? `${dia}: no estarás en casa a la hora de comer`
-        : `${dia}: sí estarás en casa`
+      nuevo ? `${dia}: Dani no estará en casa` : `${dia}: Dani sí estará en casa`
     );
   };
 
+  // Pantalla de selección de usuario
+  if (cargado && !usuario) {
+    return <UserSelect onSelect={handleUserSelect} />;
+  }
+
   return (
     <main className="min-h-screen bg-green-50">
-      {/* Cabecera con botón editar discreto */}
       <header className="bg-white shadow-sm sticky top-0 z-10 px-4 py-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">🍽️ Menú semanal</h1>
-        <button
-          onClick={() => setModoEdicion((v) => !v)}
-          title={modoEdicion ? 'Salir de edición' : 'Editar menús'}
-          className={`
-            p-2 rounded-xl transition-colors text-xl
-            ${modoEdicion
-              ? 'bg-green-100 text-green-600'
-              : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'}
-          `}
-        >
-          {modoEdicion ? '✅' : '⚙️'}
-        </button>
+        <div className="flex items-center gap-2">
+          {cargado && usuario && (
+            <span className="text-sm text-gray-400">
+              {usuario === 'mama' ? '👩' : '👨'}
+            </span>
+          )}
+          {usuario === 'dani' && (
+            <button
+              onClick={() => setModoEdicion((v) => !v)}
+              title={modoEdicion ? 'Salir de edición' : 'Editar menús'}
+              className={`p-2 rounded-xl transition-colors text-xl ${
+                modoEdicion ? 'bg-green-100 text-green-600' : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'
+              }`}
+            >
+              {modoEdicion ? '✅' : '⚙️'}
+            </button>
+          )}
+        </div>
       </header>
 
       {cargado && notifPermiso === 'default' && (
@@ -148,6 +167,8 @@ export default function Page() {
             onRating={(nota) => handleRating(dia, nota)}
             noCena={!!noCena[dia]}
             onToggleNoCena={() => handleToggleNoCena(dia)}
+            onVerDetalle={() => setViendoDetalle(dia)}
+            usuario={usuario ?? 'mama'}
           />
         ))}
       </div>
@@ -158,6 +179,15 @@ export default function Page() {
           platoActual={menu[editando]}
           onGuardar={(plato) => handleGuardar(editando, plato)}
           onCancelar={() => setEditando(null)}
+        />
+      )}
+
+      {vientoDetalle && (
+        <DetalleModal
+          dia={vientoDetalle}
+          plato={menu[vientoDetalle]}
+          detalle={detalles[vientoDetalle] ?? ''}
+          onCerrar={() => setViendoDetalle(null)}
         />
       )}
     </main>
