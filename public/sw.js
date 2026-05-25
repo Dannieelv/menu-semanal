@@ -1,4 +1,4 @@
-const CACHE = 'menu-semanal-v2';
+const CACHE = 'menu-semanal-v3';
 const PRECACHE = ['/', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
