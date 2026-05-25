@@ -1,4 +1,4 @@
-const CACHE = 'mamapp-v1';
+const CACHE = 'mamapp-v2';
 const PRECACHE = ['/', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
