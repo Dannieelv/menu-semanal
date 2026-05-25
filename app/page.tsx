@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DIAS, Dia, cargarMenu, guardarMenu, getDiaHoy } from '@/lib/menu';
+import {
+  DIAS, Dia,
+  cargarMenu, guardarMenu, getDiaHoy,
+  cargarRatings, guardarRating,
+  cargarNoCena, guardarNoCena,
+} from '@/lib/menu';
 import DayCard from '@/components/DayCard';
 import EditModal from '@/components/EditModal';
 
@@ -34,8 +39,18 @@ async function suscribirANotificaciones() {
   });
 }
 
+async function enviarNotificacion(title: string, body: string) {
+  await fetch('/api/notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, body }),
+  });
+}
+
 export default function Page() {
   const [menu, setMenu] = useState<Record<Dia, string> | null>(null);
+  const [ratings, setRatings] = useState<Partial<Record<Dia, number>>>({});
+  const [noCena, setNoCena] = useState<Partial<Record<Dia, boolean>>>({});
   const [modoEdicion, setModoEdicion] = useState(false);
   const [editando, setEditando] = useState<Dia | null>(null);
   const [diaHoy, setDiaHoy] = useState<Dia | null>(null);
@@ -43,10 +58,10 @@ export default function Page() {
 
   useEffect(() => {
     setMenu(cargarMenu());
+    setRatings(cargarRatings());
+    setNoCena(cargarNoCena());
     setDiaHoy(getDiaHoy());
-    if ('Notification' in window) {
-      setNotifPermiso(Notification.permission);
-    }
+    if ('Notification' in window) setNotifPermiso(Notification.permission);
   }, []);
 
   const handleSuscribir = async () => {
@@ -60,11 +75,26 @@ export default function Page() {
     setMenu(nuevoMenu);
     guardarMenu(nuevoMenu);
     setEditando(null);
-    await fetch('/api/notify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dia, plato: nuevoPlato }),
-    });
+    await enviarNotificacion('🍽️ Menú actualizado', `${dia}: ${nuevoPlato}`);
+  };
+
+  const handleRating = (dia: Dia, nota: number | undefined) => {
+    const nuevas = { ...ratings, [dia]: nota };
+    if (nota === undefined) delete nuevas[dia];
+    setRatings(nuevas);
+    guardarRating(dia, nota);
+  };
+
+  const handleToggleNoCena = async (dia: Dia) => {
+    const nuevo = !noCena[dia];
+    const nuevoNoCena = { ...noCena, [dia]: nuevo };
+    setNoCena(nuevoNoCena);
+    guardarNoCena(dia, nuevo);
+    if (nuevo) {
+      await enviarNotificacion('🏠 No cenas en casa', `${dia}: no estarás en casa a la hora de comer`);
+    } else {
+      await enviarNotificacion('✅ ¡Vuelves a comer en casa!', `${dia}: sí estarás en casa`);
+    }
   };
 
   if (!menu) {
@@ -113,6 +143,10 @@ export default function Page() {
             esHoy={dia === diaHoy}
             modoEdicion={modoEdicion}
             onEditar={() => setEditando(dia)}
+            rating={ratings[dia]}
+            onRating={(nota) => handleRating(dia, nota)}
+            noCena={!!noCena[dia]}
+            onToggleNoCena={() => handleToggleNoCena(dia)}
           />
         ))}
       </div>

@@ -9,12 +9,9 @@ webpush.setVapidDetails(
 );
 
 export async function POST(request: NextRequest) {
-  const { dia, plato } = await request.json();
+  const { title, body } = await request.json();
 
-  const payload = JSON.stringify({
-    title: '🍽️ Menú actualizado',
-    body: `${dia}: ${plato}`,
-  });
+  const payload = JSON.stringify({ title, body });
 
   const subs = getSubscriptions();
   await Promise.allSettled(
