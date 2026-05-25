@@ -2,13 +2,17 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Menú Semanal',
+  title: 'MamApp',
   description: 'El menú de la semana',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Menú Semanal',
+    title: 'MamApp',
+  },
+  icons: {
+    icon: '/icon-512.png',
+    apple: '/icon-512.png',
   },
 };
 

@@ -191,7 +191,10 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-green-50">
       <header className="bg-white shadow-sm sticky top-0 z-10 px-4 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">🍽️ Menú semanal</h1>
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="MamApp" className="h-9 w-9 object-contain" />
+          <h1 className="text-2xl font-bold text-gray-800">MamApp</h1>
+        </div>
         <div className="flex items-center gap-2">
           {cargado && usuario && (
             <span className="text-sm text-gray-400">
