@@ -6,7 +6,6 @@ import {
   cargarMenu, guardarMenu, getDiaHoy, getFechaDelDia,
   cargarDetalles,
   cargarRatings, guardarRating,
-  cargarNoCena, guardarNoCena,
 } from '@/lib/menu';
 import { getUsuario, type Usuario } from '@/lib/usuario';
 import DayCard from '@/components/DayCard';
@@ -49,6 +48,17 @@ async function enviarNotificacion(title: string, body: string) {
   });
 }
 
+async function fetchEstadoServidor(): Promise<Record<string, boolean>> {
+  try {
+    const res = await fetch('/api/estado');
+    if (!res.ok) return {};
+    const data = await res.json();
+    return data.noCena ?? {};
+  } catch {
+    return {};
+  }
+}
+
 export default function Page() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [cargado, setCargado] = useState(false);
@@ -69,16 +79,32 @@ export default function Page() {
     setMenu(cargarMenu());
     setDetalles(cargarDetalles());
     setRatings(cargarRatings());
-    setNoCena(cargarNoCena());
     const hoy = getDiaHoy();
     setDiaHoy(hoy);
     if ('Notification' in window) setNotifPermiso(Notification.permission);
+
+    // Cargar noCena desde el servidor
+    fetchEstadoServidor().then((nc) => setNoCena(nc));
     setCargado(true);
 
     setTimeout(() => {
       const el = document.querySelector(`[data-day="${hoy}"]`);
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 200);
+
+    // Refrescar noCena cada 30 s (para que Mamá vea cambios sin recargar)
+    const intervalo = setInterval(() => {
+      fetchEstadoServidor().then((nc) => setNoCena(nc));
+    }, 30_000);
+
+    // Refrescar también al volver a la pestaña
+    const onFocus = () => fetchEstadoServidor().then((nc) => setNoCena(nc));
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(intervalo);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   const handleUserSelect = (u: Usuario) => setUsuario(u);
@@ -105,12 +131,22 @@ export default function Page() {
 
   const handleToggleNoCena = async (dia: Dia) => {
     const nuevo = !noCena[dia];
+    // Actualizar UI de forma optimista
     setNoCena({ ...noCena, [dia]: nuevo });
-    guardarNoCena(dia, nuevo);
+    // Persistir en el servidor (compartido entre navegadores)
+    await fetch('/api/estado', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dia, valor: nuevo }),
+    });
     await enviarNotificacion(
       nuevo ? '🏠 No cenas en casa' : '✅ ¡Vuelves a comer en casa!',
       nuevo ? `${dia}: Dani no estará en casa` : `${dia}: Dani sí estará en casa`
     );
+  };
+
+  const handleTestNotificacion = async () => {
+    await enviarNotificacion('🔔 Test de notificación', 'Las notificaciones funcionan correctamente ✅');
   };
 
   // Pantalla de selección de usuario
@@ -127,6 +163,15 @@ export default function Page() {
             <span className="text-sm text-gray-400">
               {usuario === 'mama' ? '👩' : '👨'}
             </span>
+          )}
+          {usuario === 'dani' && modoEdicion && (
+            <button
+              onClick={handleTestNotificacion}
+              title="Enviar notificación de prueba"
+              className="p-2 rounded-xl text-xl text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+            >
+              🔔
+            </button>
           )}
           {usuario === 'dani' && (
             <button
