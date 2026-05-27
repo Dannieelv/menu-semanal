@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   DIAS, Dia, MENU_DEFAULT,
-  cargarMenu, guardarMenu, getDiaHoy, getFechaDelDia,
-  cargarDetalles, guardarDetalles,
-  cargarRatings, guardarRating,
+  getDiaHoy, getFechaDelDia,
 } from '@/lib/menu';
 import { getUsuario, type Usuario } from '@/lib/usuario';
 import DayCard from '@/components/DayCard';
@@ -48,16 +46,38 @@ async function enviarNotificacion(title: string, body: string) {
   });
 }
 
-async function fetchEstadoServidor(): Promise<Record<string, boolean>> {
+function getRatingIcon(n: number): string {
+  if (n <= 2) return '🤢';
+  if (n <= 4) return '😕';
+  if (n <= 6) return '😐';
+  if (n <= 8) return '😋';
+  return '🤩';
+}
+
+// ─── Helpers de fetch ────────────────────────────────────────────────────────
+
+async function fetchMenu(): Promise<{ menu: Record<string, string>; detalles: Record<string, string> }> {
   try {
-    const res = await fetch('/api/estado');
-    if (!res.ok) return {};
-    const data = await res.json();
-    return data.noCena ?? {};
+    const res = await fetch('/api/menu');
+    if (!res.ok) return { menu: { ...MENU_DEFAULT }, detalles: {} };
+    return await res.json();
   } catch {
-    return {};
+    return { menu: { ...MENU_DEFAULT }, detalles: {} };
   }
 }
+
+async function fetchEstado(): Promise<{ noCena: Record<string, boolean>; ratings: Record<string, number> }> {
+  try {
+    const res = await fetch('/api/estado');
+    if (!res.ok) return { noCena: {}, ratings: {} };
+    const data = await res.json();
+    return { noCena: data.noCena ?? {}, ratings: data.ratings ?? {} };
+  } catch {
+    return { noCena: {}, ratings: {} };
+  }
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function Page() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
@@ -76,29 +96,35 @@ export default function Page() {
 
   useEffect(() => {
     setUsuario(getUsuario());
-    setMenu(cargarMenu());
-    setDetalles(cargarDetalles());
-    setRatings(cargarRatings());
     const hoy = getDiaHoy();
     setDiaHoy(hoy);
     if ('Notification' in window) setNotifPermiso(Notification.permission);
 
-    // Cargar noCena desde el servidor
-    fetchEstadoServidor().then((nc) => setNoCena(nc));
-    setCargado(true);
+    // Cargar todo desde el servidor
+    Promise.all([fetchMenu(), fetchEstado()]).then(([menuData, estadoData]) => {
+      setMenu(menuData.menu as Record<Dia, string>);
+      setDetalles(menuData.detalles as Record<Dia, string>);
+      setNoCena(estadoData.noCena);
+      setRatings(estadoData.ratings as Partial<Record<Dia, number>>);
+      setCargado(true);
+      setTimeout(() => {
+        const el = document.querySelector(`[data-day="${hoy}"]`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    });
 
-    setTimeout(() => {
-      const el = document.querySelector(`[data-day="${hoy}"]`);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 200);
+    // Refrescar todo cada 30 s para que Mamá vea cambios en tiempo real
+    const refrescar = () => {
+      Promise.all([fetchMenu(), fetchEstado()]).then(([menuData, estadoData]) => {
+        setMenu(menuData.menu as Record<Dia, string>);
+        setDetalles(menuData.detalles as Record<Dia, string>);
+        setNoCena(estadoData.noCena);
+        setRatings(estadoData.ratings as Partial<Record<Dia, number>>);
+      });
+    };
 
-    // Refrescar noCena cada 30 s (para que Mamá vea cambios sin recargar)
-    const intervalo = setInterval(() => {
-      fetchEstadoServidor().then((nc) => setNoCena(nc));
-    }, 30_000);
-
-    // Refrescar también al volver a la pestaña
-    const onFocus = () => fetchEstadoServidor().then((nc) => setNoCena(nc));
+    const intervalo = setInterval(refrescar, 30_000);
+    const onFocus = () => refrescar();
     window.addEventListener('focus', onFocus);
 
     return () => {
@@ -115,32 +141,47 @@ export default function Page() {
   };
 
   const handleGuardar = async (dia: Dia, nuevoPlato: string, nuevoDetalle: string) => {
-    const nuevoMenu = { ...menu, [dia]: nuevoPlato };
-    setMenu(nuevoMenu);
-    guardarMenu(nuevoMenu);
-    const nuevosDetalles = { ...detalles, [dia]: nuevoDetalle };
-    setDetalles(nuevosDetalles);
-    guardarDetalles(nuevosDetalles);
+    // Actualizar UI de forma optimista
+    setMenu((m) => ({ ...m, [dia]: nuevoPlato }));
+    setDetalles((d) => ({ ...d, [dia]: nuevoDetalle }));
     setEditando(null);
+    // Persistir en el servidor
+    await fetch('/api/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dia, plato: nuevoPlato, detalle: nuevoDetalle }),
+    });
     await enviarNotificacion('🍽️ Menú actualizado', `${dia}: ${nuevoPlato}`);
   };
 
-  const handleRating = (dia: Dia, nota: number | undefined) => {
-    const nuevas = { ...ratings };
-    if (nota === undefined) delete nuevas[dia]; else nuevas[dia] = nota;
-    setRatings(nuevas);
-    guardarRating(dia, nota);
+  const handleRating = async (dia: Dia, nota: number | undefined) => {
+    // Actualizar UI de forma optimista
+    setRatings((r) => {
+      const nuevas = { ...r };
+      if (nota === undefined) delete nuevas[dia]; else nuevas[dia] = nota;
+      return nuevas;
+    });
+    // Persistir en el servidor
+    await fetch('/api/estado', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campo: 'rating', dia, valor: nota ?? null }),
+    });
+    if (nota !== undefined) {
+      await enviarNotificacion(
+        `${getRatingIcon(nota)} Puntuación del ${dia}`,
+        `${nota}/10 — ${menu[dia]}`
+      );
+    }
   };
 
   const handleToggleNoCena = async (dia: Dia) => {
     const nuevo = !noCena[dia];
-    // Actualizar UI de forma optimista
-    setNoCena({ ...noCena, [dia]: nuevo });
-    // Persistir en el servidor (compartido entre navegadores)
+    setNoCena((s) => ({ ...s, [dia]: nuevo }));
     await fetch('/api/estado', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dia, valor: nuevo }),
+      body: JSON.stringify({ campo: 'noCena', dia, valor: nuevo }),
     });
     await enviarNotificacion(
       nuevo ? '🏠 No cenas en casa' : '✅ ¡Vuelves a comer en casa!',

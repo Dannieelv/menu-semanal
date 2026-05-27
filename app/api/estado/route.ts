@@ -6,16 +6,21 @@ import { getWeekKey } from '@/lib/menu';
 const DATA_DIR = path.join(process.cwd(), 'data');
 const FILE = path.join(DATA_DIR, 'estado.json');
 
-type Estado = { weekKey: string; noCena: Record<string, boolean> };
+type Estado = {
+  weekKey: string;
+  noCena: Record<string, boolean>;
+  ratings: Record<string, number>;
+};
 
 function read(): Estado {
   try {
-    if (!fs.existsSync(FILE)) return { weekKey: '', noCena: {} };
-    const stored: Estado = JSON.parse(fs.readFileSync(FILE, 'utf-8'));
-    if (stored.weekKey !== getWeekKey()) return { weekKey: getWeekKey(), noCena: {} };
-    return stored;
+    if (!fs.existsSync(FILE)) return { weekKey: '', noCena: {}, ratings: {} };
+    const stored = JSON.parse(fs.readFileSync(FILE, 'utf-8')) as Partial<Estado>;
+    if (stored.weekKey !== getWeekKey()) return { weekKey: getWeekKey(), noCena: {}, ratings: {} };
+    // backwards compat: añadir ratings si no existía aún
+    return { ratings: {}, noCena: {}, ...stored, weekKey: getWeekKey() };
   } catch {
-    return { weekKey: getWeekKey(), noCena: {} };
+    return { weekKey: getWeekKey(), noCena: {}, ratings: {} };
   }
 }
 
@@ -29,9 +34,22 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { dia, valor } = await request.json();
+  const body = await request.json();
   const estado = read();
-  estado.noCena[dia] = valor;
+
+  if (body.campo === 'noCena') {
+    estado.noCena[body.dia] = body.valor;
+  } else if (body.campo === 'rating') {
+    if (body.valor === null || body.valor === undefined) {
+      delete estado.ratings[body.dia];
+    } else {
+      estado.ratings[body.dia] = body.valor;
+    }
+  } else {
+    // legado: POST antiguo sin campo → era noCena
+    estado.noCena[body.dia] = body.valor;
+  }
+
   write(estado);
   return NextResponse.json({ ok: true });
 }
