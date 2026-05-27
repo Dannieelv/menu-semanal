@@ -1,6 +1,6 @@
 {
-  "name": "Menú Semanal",
-  "short_name": "Menú",
+  "name": "MamApp",
+  "short_name": "MamApp",
   "description": "El menú de comida de cada día",
   "start_url": "/",
   "display": "standalone",

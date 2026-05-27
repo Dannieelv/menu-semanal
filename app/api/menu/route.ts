@@ -6,6 +6,8 @@ import { MENU_DEFAULT, DETALLES_DEFAULT } from '@/lib/menu';
 const DATA_DIR = path.join(process.cwd(), 'data');
 const FILE = path.join(DATA_DIR, 'menu.json');
 
+// Sin weekKey: el menú persiste hasta que Dani lo edite manualmente.
+// La versión anterior tenía weekKey y borraba el menú cada lunes — ese era el bug.
 type MenuData = {
   menu: Record<string, string>;
   detalles: Record<string, string>;

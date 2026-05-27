@@ -14,9 +14,9 @@ export default function UserSelect({ onSelect }: Props) {
 
   return (
     <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center px-6 gap-8">
-      <div className="text-center">
-        <p className="text-5xl mb-4">🍽️</p>
-        <h1 className="text-3xl font-bold text-gray-800">Menú semanal</h1>
+      <div className="text-center flex flex-col items-center">
+        <img src="/logo.png" alt="MamApp" className="h-28 w-28 object-contain mb-2" />
+        <h1 className="text-3xl font-bold text-gray-800">MamApp</h1>
         <p className="text-lg text-gray-500 mt-2">¿Quién eres?</p>
       </div>
 

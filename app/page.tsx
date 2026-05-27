@@ -100,7 +100,7 @@ export default function Page() {
     setDiaHoy(hoy);
     if ('Notification' in window) setNotifPermiso(Notification.permission);
 
-    // Cargar todo desde el servidor
+    // Cargar todo desde el servidor (fuente de verdad compartida entre navegadores)
     Promise.all([fetchMenu(), fetchEstado()]).then(([menuData, estadoData]) => {
       setMenu(menuData.menu as Record<Dia, string>);
       setDetalles(menuData.detalles as Record<Dia, string>);
@@ -113,7 +113,7 @@ export default function Page() {
       }, 200);
     });
 
-    // Refrescar todo cada 30 s para que Mamá vea cambios en tiempo real
+    // Refrescar todo cada 30 s + al volver a la pestaña / pantalla
     const refrescar = () => {
       Promise.all([fetchMenu(), fetchEstado()]).then(([menuData, estadoData]) => {
         setMenu(menuData.menu as Record<Dia, string>);
@@ -125,11 +125,14 @@ export default function Page() {
 
     const intervalo = setInterval(refrescar, 30_000);
     const onFocus = () => refrescar();
+    const onVisibility = () => { if (!document.hidden) refrescar(); };
     window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       clearInterval(intervalo);
       window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
 
@@ -201,7 +204,10 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-green-50">
       <header className="bg-white shadow-sm sticky top-0 z-10 px-4 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">🍽️ Menú semanal</h1>
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="MamApp" className="h-9 w-9 object-contain" />
+          <h1 className="text-2xl font-bold text-gray-800">MamApp</h1>
+        </div>
         <div className="flex items-center gap-2">
           {cargado && usuario && (
             <span className="text-sm text-gray-400">

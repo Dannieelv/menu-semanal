@@ -1,4 +1,4 @@
-const CACHE = 'menu-semanal-v9';
+const CACHE = 'mamapp-v4';
 const PRECACHE = ['/', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
